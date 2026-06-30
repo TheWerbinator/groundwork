@@ -2,6 +2,45 @@
 
 Running log of what is built, phase by phase. Newest entries at the top of each phase.
 
+## Phase 3 - Agent v1 (LangGraph) (done)
+
+- **`apps/api`** (uv package, path-depends on `retrieval`):
+  - `agent/state.py` - `AgentState` TypedDict; `notes` uses an `add` reducer (accumulates) while
+    other keys overwrite. Reducer is a teaching device now, the mechanism the Phase 5 critic loop
+    will use.
+  - `agent/nodes.py` - planner (LLM rewrites question -> search query), retriever (hybrid search),
+    drafter (grounded answer + deterministic citations). Factory-built, dependency-injected.
+  - `agent/graph.py` - linear StateGraph: START -> planner -> retriever -> drafter -> END.
+  - `agent/prompts.py` - planner/drafter system prompts + the RAG augment prompt.
+  - `llm.py` - provider factory (claude | openai | ollama); nodes call `.invoke().content`, never
+    know the provider (the seam the Phase 10 eval harness uses).
+  - `service.py` - `AgentService` (answer/stream); single construction path for app + CLI.
+  - `app.py` - FastAPI `POST /ask` + `/health`; OpenAPI 3.1 schema; service injected for test
+    override.
+  - `cli.py` - `groundwork-api ask [--trace] | serve`. `--trace` streams per-node state.
+  - `tests/` - 7 tests (graph w/ fake LLM, citations, notes-reducer, stream order, endpoint),
+    no network.
+- **`ingestion` config (additive):** LLM settings (default_provider, anthropic/openai/ollama
+  models + keys). `.env.example`: `DEFAULT_PROVIDER`, default Anthropic model = sonnet-4-6 (cheaper
+  than opus for an agent loop).
+- **Verified:** 7/7 tests pass; OpenAPI 3.1 generates with `/ask`. **Live-verified end to end on
+  two providers** with grounded, cited answers that correctly refused to invent the k=60 origin
+  absent from context:
+  - **Claude (sonnet-4-6):** works.
+  - **Ollama Cloud (`gpt-oss:120b-cloud`, free tier):** works, via the signed-in local daemon
+    proxying to Ollama's servers (no local GPU). `glm-5.2:cloud` returns 403 (paid subscription).
+  Verified through BOTH surfaces: the `ask` CLI and the real `POST /ask` HTTP endpoint (TestClient
+  hitting the live agent, no fakes) returned 200 with grounded, cited answers on each provider.
+- **Two bugs caught live and fixed:**
+  1. sonnet-4-6 rejects `temperature` (`400 deprecated`); no longer passed to `ChatAnthropic`.
+  2. Windows `cp1252` console crashed on a model answer containing U+202F; `cli.main` now
+     reconfigures stdout/stderr to UTF-8.
+- **Ollama auth learning (in `.env.example`):** ollama.com/settings/keys holds your daemon's
+  ed25519 PUBLIC key (register it via `ollama signin`), not a bearer token. Cloud path = signed-in
+  daemon at localhost + a `:cloud` model + blank `OLLAMA_API_KEY`.
+- **Learner scaffolding:** teaching-grade comments throughout the agent; `docs/agents.md`
+  walkthrough ending in a reproducible trace; `--trace` mode.
+
 ## Teaching docs (learning path)
 
 `docs/` is a guided learning path that explains how the code works (concept -> our code -> run
@@ -77,7 +116,7 @@ node. Linked from the root README and each package README.
 | 0 | Bootstrap | done |
 | 1 | Corpus + ingestion | done |
 | 2 | Hybrid retrieval | done |
-| 3 | Agent v1 (LangGraph) | not started |
+| 3 | Agent v1 (LangGraph) | done |
 | 4 | Guardrails | not started |
 | 5 | Self-reflection + critic | not started |
 | 6 | MCP | not started |

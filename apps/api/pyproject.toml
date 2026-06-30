@@ -1,0 +1,33 @@
+[project]
+name = "groundwork-api"
+version = "0.1.0"
+description = "Groundwork API: a LangGraph agent (planner -> retriever -> drafter) served over REST."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "groundwork-retrieval",
+    "langgraph>=0.3,<2",
+    "langchain-core>=0.3,<2",
+    "langchain-anthropic>=0.3,<2",
+    "langchain-openai>=0.3,<2",
+    "langchain-ollama>=0.3,<2",
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
+    "typer>=0.12,<1",
+]
+
+[project.scripts]
+groundwork-api = "groundwork_api.cli:main"
+
+[tool.uv.sources]
+groundwork-retrieval = { path = "../../packages/retrieval", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/groundwork_api"]
+
+[dependency-groups]
+dev = ["pytest>=8,<9", "httpx>=0.27,<1"]

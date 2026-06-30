@@ -45,6 +45,15 @@ class Settings(BaseSettings):
     top_k: int = 5  # chunks returned after fusion + rerank
     rrf_k: int = 60  # Reciprocal Rank Fusion constant (Cormack et al. 2009)
 
+    # LLM (the agent's answering model)
+    default_provider: str = "claude"  # "claude" | "openai" | "ollama"
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-4-6"  # sonnet by default: cheaper for an agent loop
+    openai_model: str = "gpt-5"
+    ollama_host: str = "http://localhost:11434"
+    ollama_model: str = "llama3.1:8b"
+    ollama_api_key: str = ""  # set for Ollama Cloud (:cloud models); leave blank for local
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -92,3 +92,27 @@ alternatives rejected. Written so each is defensible in an interview.
   is documented in the corpus.
 - **Reused chunk ids as the fusion key.** Deterministic `source:index` ids already exist from
   ingestion, so the two ranked lists merge on a stable key with no extra bookkeeping.
+
+## Phase 3 decisions
+
+- **LangGraph as the agent framework, explicit StateGraph.** Control flow is data you can draw,
+  stream, and test per node, which fits the teaching goal and the audit/trace requirement better
+  than a hidden loop. AutoGen / CrewAI documented as alternatives in the corpus.
+- **Linear graph for v1 (planner -> retriever -> drafter).** The critic + self-reflection loop is
+  deliberately deferred to Phase 5 so the first version is the smallest thing that teaches state,
+  nodes, and edges. Conditional edges + the loop land when there is a critic to route on.
+- **`notes` reducer as a teaching device.** v1 does not strictly need an accumulating key, but
+  adding one (`Annotated[list, add]`) makes the reducer concept concrete and powers `--trace`, and
+  it is the exact mechanism Phase 5 needs. Cheap now, foundational later.
+- **Provider-agnostic LLM seam.** A `build_chat_model` factory returns Claude / GPT / Ollama; nodes
+  only call `.invoke().content`. Mirrors the embedder factory, and is what lets the Phase 10 eval
+  harness compare models on identical runs. Default Anthropic model is sonnet-4-6, not opus: an
+  agent loop on opus is needlessly expensive for a teaching demo; opus stays one env var away.
+- **Factory-built, dependency-injected nodes.** Nodes close over their llm/retriever, so they stay
+  pure and testable with fakes. The whole graph runs in tests with zero network or API keys.
+- **Deterministic citations from the grounding set.** Citations are derived from the chunks placed
+  in the prompt, so an answer always points at real retrieved sources. Tightening to "only sources
+  actually used" is deferred; honest and simple beats clever here.
+- **AgentService as the single construction path.** Both the REST app and the CLI build the agent
+  through one `build_service`, and the FastAPI dependency is overridable, so tests swap a fake
+  service without touching routes.
