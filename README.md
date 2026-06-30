@@ -33,6 +33,10 @@ alternatives in [docs/](docs). See [PLAN.md](PLAN.md) for the full blueprint,
 [DECISIONS.md](DECISIONS.md) for why each choice was made, and [PROGRESS.md](PROGRESS.md)
 for build status.
 
+**New here?** The [docs/](docs/README.md) folder is a learning path that walks through how the
+code works, stage by stage: [ingestion](docs/ingestion.md) -> [retrieval](docs/retrieval.md) ->
+[agents](docs/agents.md). Each page goes concept -> our code -> run it yourself -> exercises.
+
 ## Stack
 
 Python / FastAPI - Next.js / TypeScript - LangGraph - Chroma (+ BM25 hybrid) - Rust (`ort`

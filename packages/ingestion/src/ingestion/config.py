@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     chunk_size: int = 800
     chunk_overlap: int = 120
 
+    # Retrieval
+    candidate_pool: int = 20  # chunks each retriever contributes before fusion
+    top_k: int = 5  # chunks returned after fusion + rerank
+    rrf_k: int = 60  # Reciprocal Rank Fusion constant (Cormack et al. 2009)
+
 
 @lru_cache
 def get_settings() -> Settings:

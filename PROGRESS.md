@@ -2,6 +2,37 @@
 
 Running log of what is built, phase by phase. Newest entries at the top of each phase.
 
+## Teaching docs (learning path)
+
+`docs/` is a guided learning path that explains how the code works (concept -> our code -> run
+it -> exercises), distinct from the corpus (generic concepts) and DECISIONS.md (rationale).
+Backfilled before Phase 3: [docs/ingestion.md](docs/ingestion.md),
+[docs/retrieval.md](docs/retrieval.md) (with a worked RRF example). Phase 3 adds
+`docs/agents.md` plus a `--trace` mode so a learner can watch the LangGraph state change at each
+node. Linked from the root README and each package README.
+
+## Phase 2 - Hybrid retrieval (done)
+
+- **`packages/retrieval`** (uv package, path-depends on `ingestion`, reuses Settings /
+  embedder / store):
+  - `bm25.py` - in-memory BM25 (`rank-bm25`) over the same chunks the vector store holds;
+    deterministic tokenizer.
+  - `fusion.py` - `reciprocal_rank_fusion`, `1/(k+rank)`, k=60 (pure, testable).
+  - `rerank.py` - `Reranker` protocol + `NoOpReranker` passthrough (Rust cross-encoder swaps
+    in at Phase 7, no caller changes).
+  - `hybrid.py` - `HybridRetriever`: dense + sparse legs -> RRF -> rerank -> top_k; each leg
+    exposed for the teaching CLI.
+  - `cli.py` - `retrieval search` prints dense vs sparse vs hybrid side by side.
+  - `tests/` - 10 unit tests (RRF math, BM25 ranking, no network).
+- **`ingestion` additions (additive):** `Retrieved.id`, `query` returns ids, new `Record` +
+  `get_all()` (for the BM25 build); retrieval knobs in settings (`candidate_pool`, `top_k`,
+  `rrf_k`).
+- **Verified:** retrieval 10/10 + ingestion 6/6 pass; live comparison shows dense and sparse
+  surfacing different chunks and RRF fusing them (e.g. an item appearing in both legs rises);
+  exact-token query ("Streamable HTTP") confirms BM25's keyword strength.
+- **Bug caught in verify:** a fusion unit test asserted the wrong RRF property (assumed
+  consistent-2nd beats split-1st; the math is the opposite). Test corrected; code was right.
+
 ## Phase 1 - Corpus + ingestion (done)
 
 - **Corpus:** 8 KB markdown docs under `packages/kb` (rag, chunking, embeddings,
@@ -45,7 +76,7 @@ Running log of what is built, phase by phase. Newest entries at the top of each 
 |---|---|---|
 | 0 | Bootstrap | done |
 | 1 | Corpus + ingestion | done |
-| 2 | Hybrid retrieval | not started |
+| 2 | Hybrid retrieval | done |
 | 3 | Agent v1 (LangGraph) | not started |
 | 4 | Guardrails | not started |
 | 5 | Self-reflection + critic | not started |

@@ -19,7 +19,17 @@ from ingestion.config import Settings
 
 
 @dataclass
+class Record:
+    """A stored chunk, used to build the sparse (BM25) index from the same corpus."""
+
+    id: str
+    text: str
+    metadata: dict
+
+
+@dataclass
 class Retrieved:
+    id: str
     text: str
     metadata: dict
     distance: float
@@ -61,12 +71,22 @@ class ChromaStore:
     def query(self, query_embedding: list[float], n_results: int = 5) -> list[Retrieved]:
         res = self._collection.query(query_embeddings=[query_embedding], n_results=n_results)
         out: list[Retrieved] = []
+        ids = res["ids"][0]
         docs = res["documents"][0]
         metas = res["metadatas"][0]
         dists = res["distances"][0]
-        for text, meta, dist in zip(docs, metas, dists):
-            out.append(Retrieved(text=text, metadata=meta or {}, distance=dist))
+        for cid, text, meta, dist in zip(ids, docs, metas, dists):
+            out.append(Retrieved(id=cid, text=text, metadata=meta or {}, distance=dist))
         return out
+
+    def get_all(self) -> list[Record]:
+        """Return every stored chunk. Used to build the in-memory BM25 index over the same
+        corpus the vector search runs on."""
+        res = self._collection.get(include=["documents", "metadatas"])
+        return [
+            Record(id=cid, text=text, metadata=meta or {})
+            for cid, text, meta in zip(res["ids"], res["documents"], res["metadatas"])
+        ]
 
     @staticmethod
     def _chunk_id(chunk: Chunk) -> str:

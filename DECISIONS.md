@@ -71,3 +71,24 @@ alternatives rejected. Written so each is defensible in an interview.
   authoritative sources before commit (per the verify-against-docs rule). The corpus is the
   product's ground truth, so a stale claim (the MCP transport bug) would have taught the wrong
   thing and surfaced in grounded answers.
+
+## Phase 2 decisions
+
+- **Separate `packages/retrieval` (read path) from `ingestion` (write path).** Retrieval is
+  consumed by both the agent (Phase 3) and the eval harness (Phase 10), so it is a shared
+  library, not app code. It path-depends on `ingestion` to reuse Settings, the embedder, and the
+  store rather than duplicating them. Rejected: folding retrieval into apps/api (eval would need
+  it too) and a full uv workspace refactor (heavier than warranted now).
+- **BM25 via `rank-bm25`, built in memory from the store's chunks.** The corpus is small, so an
+  in-memory sparse index rebuilt from `store.get_all()` is simple, dependency-light, and clear to
+  teach. A larger deployment would persist a sparse index (or use a store with native BM25); noted
+  as future work. Keeps the sparse leg running over exactly the same chunks as the dense leg.
+- **Reciprocal Rank Fusion over score combination.** Cosine distance and BM25 scores are not
+  comparable, so fusing by rank (`1/(k+rank)`, k=60) needs no score calibration and no tuning.
+  Implemented as a pure function so the math is unit-tested independently of any index.
+- **Reranker is a seam now, a service later.** A `Reranker` protocol with a `NoOpReranker`
+  passthrough wires the whole pipeline against the interface, so the Phase 7 Rust cross-encoder is
+  a drop-in swap rather than a pipeline rewrite. The hot-path argument for a fast dedicated service
+  is documented in the corpus.
+- **Reused chunk ids as the fusion key.** Deterministic `source:index` ids already exist from
+  ingestion, so the two ranked lists merge on a stable key with no extra bookkeeping.

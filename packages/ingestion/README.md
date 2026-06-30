@@ -30,4 +30,7 @@ Configuration comes from the repo-root `.env` (see [`.env.example`](../../.env.e
 Local defaults run with zero API keys; the on-disk index lives at `INDEX_PATH`
 (`data/index`, gitignored).
 
+**Learn how it works:** [docs/ingestion.md](../../docs/ingestion.md) is a guided walkthrough of
+this code (concept -> our code -> run it -> exercises).
+
 **Built in:** Phase 1. Retrieval (BM25 + fusion + rerank) builds on this in Phase 2.
