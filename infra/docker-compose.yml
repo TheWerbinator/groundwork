@@ -58,6 +58,9 @@ services:
       context: ../apps/api
     env_file:
       - ../.env
+    environment:
+      # Override the empty local default: inside compose, reach the chroma service by name.
+      CHROMA_HOST: http://chroma:8000
     ports:
       - "8000:8000"
     depends_on:
