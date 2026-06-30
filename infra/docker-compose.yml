@@ -1,0 +1,79 @@
+# Groundwork - local-first stack.
+# Phase 0 skeleton: services declared and networked. Build contexts / Dockerfiles are
+# filled in as each phase lands (see PLAN.md). `docker compose config` should parse today;
+# `up` becomes meaningful from Phase 1 on.
+
+name: groundwork
+
+services:
+  # --- Vector store (Phase 1) ---
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma-data:/chroma/.chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Local open-source model for the 3-way eval (Phase 10) ---
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
+  # --- Distributed tracing (Phase 9) ---
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"   # UI
+      - "4317:4317"     # OTLP gRPC
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+  # --- Rust rerank service (Phase 7) ---
+  rerank:
+    build:
+      context: ../apps/rerank
+    ports:
+      - "8080:8080"
+    profiles: ["full"]   # not built until Phase 7
+
+  # --- MCP server (Phase 6) ---
+  mcp:
+    build:
+      context: ../apps/mcp
+    ports:
+      - "9000:9000"
+    profiles: ["full"]   # not built until Phase 6
+
+  # --- FastAPI backend + LangGraph agent (Phase 3) ---
+  api:
+    build:
+      context: ../apps/api
+    env_file:
+      - ../.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - chroma
+    profiles: ["full"]   # not built until Phase 3
+
+  # --- Next.js HITL UI (Phase 8) ---
+  web:
+    build:
+      context: ../apps/web
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    profiles: ["full"]   # not built until Phase 8
+
+volumes:
+  chroma-data:
+  ollama-data:

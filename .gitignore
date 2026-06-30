@@ -1,0 +1,38 @@
+# --- Secrets (guard FIRST so nothing below re-includes them) ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# --- Rust ---
+# Scoped to the Rust app so a top-level `target/` rule can't eat anything else.
+apps/rerank/target/
+
+# --- Data / models / local stores (regenerable, can be large) ---
+.chroma/
+*.onnx
+data/index/
+*.log
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
