@@ -116,3 +116,28 @@ alternatives rejected. Written so each is defensible in an interview.
 - **AgentService as the single construction path.** Both the REST app and the CLI build the agent
   through one `build_service`, and the FastAPI dependency is overridable, so tests swap a fake
   service without touching routes.
+
+## Phase 4 decisions
+
+- **Guardrails are deterministic pure functions, not an LLM.** Same input, same verdict, every
+  time, which is what makes them testable and auditable (the corpus's core point). All guardrail
+  logic runs with zero network in `test_guardrails.py`.
+- **Guards as graph nodes, blocking via a conditional edge.** `input_guard` / `output_guard` sit
+  on the graph's ends; a blocked request takes a conditional edge straight to END, so an injection
+  attempt is refused before any model call (no cost, no leak). This also introduces the
+  conditional-edge mechanism Phase 5's critic loop reuses. Rejected: wrapping the guards around
+  `graph.invoke` in the service (works, but hides them from the graph and teaches less).
+- **Redact PII, block injection.** PII is data a user may legitimately include, so it is redacted
+  and forwarded; injection is an attack on the system's instructions, so it is refused. Different
+  responses for different threats.
+- **Grounding by citation match.** The output guard confirms the answer cites at least one source
+  that was actually retrieved (`[source]` intersect retrieved sources). Deterministic and cheap,
+  and it directly operationalizes "grounded = supported by retrieved context." Tightening to
+  per-claim support is deferred.
+- **Regex/pattern detectors, with the limitation documented.** Regex PII and pattern injection are
+  a deterministic floor, not a guarantee; a trained model would layer on top. Chosen for
+  teachability and zero dependencies. The honest limits are written into the code and docs rather
+  than hidden.
+- **Trusted corpus, so indirect (retrieved-document) injection is a documented extension.** The KB
+  is content we authored, so retrieval-time injection screening is noted as future work rather
+  than shipped, to avoid implying a defense that is not exercised.

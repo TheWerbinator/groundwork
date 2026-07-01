@@ -2,6 +2,25 @@
 
 Running log of what is built, phase by phase. Newest entries at the top of each phase.
 
+## Phase 4 - Guardrails (done)
+
+- **`groundwork_api/guardrails/`** (pure, deterministic, no LLM):
+  - `pii.py` - regex detect/redact for EMAIL, SSN, PHONE, CREDIT_CARD.
+  - `injection.py` - pattern screen for override-instructions / reveal-prompt / role-hijack /
+    jailbreak.
+  - `checks.py` - `check_input` (redact PII, block injection) + `check_output` (grounding by
+    citation match, PII-leak redaction).
+- **Graph wiring** (`agent/guards.py`, `graph.py`): `input_guard` and `output_guard` nodes; a
+  **conditional edge** routes a blocked (injection) request straight to END with a refusal, before
+  any LLM call. New state fields: `blocked`, `grounded`, `flags` (reducer-accumulated).
+- **REST**: `/ask` now returns `blocked`, `grounded`, `flags`.
+- **Tests:** 25 total (was 7); +18 for guardrails (PII, injection, grounding units + agent
+  integration: injection blocked pre-LLM, PII redacted then answered, uncited answer flagged
+  ungrounded).
+- **Verified live (Claude):** injection request refused with ONLY `input_guard` running (zero LLM
+  cost, conditional edge worked); an email in the question was redacted to `[REDACTED_EMAIL]`
+  before reaching the model (the model even noted the redaction) and the answer came back grounded.
+
 ## Phase 3 - Agent v1 (LangGraph) (done)
 
 - **`apps/api`** (uv package, path-depends on `retrieval`):
@@ -117,7 +136,7 @@ node. Linked from the root README and each package README.
 | 1 | Corpus + ingestion | done |
 | 2 | Hybrid retrieval | done |
 | 3 | Agent v1 (LangGraph) | done |
-| 4 | Guardrails | not started |
+| 4 | Guardrails | done |
 | 5 | Self-reflection + critic | not started |
 | 6 | MCP | not started |
 | 7 | Rust rerank service | not started |

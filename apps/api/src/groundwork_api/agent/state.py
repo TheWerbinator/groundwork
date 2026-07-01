@@ -37,9 +37,14 @@ class Citation(TypedDict):
 
 
 class AgentState(TypedDict):
-    question: str  # the user's question (input)
+    question: str  # the user's question (input; PII-redacted by the input guard)
     search_query: str  # planner's focused query for retrieval
     chunks: list[Chunk]  # retriever's grounding context
     answer: str  # drafter's grounded answer
     citations: list[Citation]  # sources the answer is grounded in
     notes: Annotated[list[str], add]  # accumulated step log (reducer: append, do not overwrite)
+
+    # Guardrails (Phase 4)
+    blocked: bool  # input guard refused the request (e.g. prompt injection)
+    grounded: bool  # output guard confirmed the answer cites retrieved sources
+    flags: Annotated[list[str], add]  # guardrail findings, accumulated across guard nodes

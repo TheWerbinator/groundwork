@@ -39,6 +39,9 @@ class AskResponse(BaseModel):
     answer: str
     citations: list[Citation]
     chunks_used: int
+    blocked: bool  # input guard refused the request
+    grounded: bool  # output guard confirmed the answer cites retrieved sources
+    flags: list[str]  # guardrail findings (pii_redacted, injection, ungrounded, ...)
 
 
 # --- Dependency: one AgentService for the process, overridable in tests ---
@@ -66,4 +69,7 @@ def ask(req: AskRequest, service: AgentService = Depends(get_service)) -> AskRes
         answer=state.get("answer", ""),
         citations=[Citation(**c) for c in state.get("citations", [])],
         chunks_used=len(state.get("chunks", [])),
+        blocked=state.get("blocked", False),
+        grounded=state.get("grounded", False),
+        flags=state.get("flags", []),
     )

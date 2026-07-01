@@ -15,6 +15,9 @@ class FakeService:
             "answer": "RRF sums 1/(k+rank) [hybrid-search].",
             "citations": [{"source": "hybrid-search", "heading": "Reciprocal Rank Fusion"}],
             "chunks": [{"id": "hybrid-search:1"}],
+            "blocked": False,
+            "grounded": True,
+            "flags": [],
         }
 
 
@@ -38,6 +41,9 @@ def test_ask_returns_grounded_answer_shape():
     assert body["citations"] == [
         {"source": "hybrid-search", "heading": "Reciprocal Rank Fusion"}
     ]
+    assert body["blocked"] is False
+    assert body["grounded"] is True
+    assert body["flags"] == []
 
 
 def test_ask_rejects_empty_question():

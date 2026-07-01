@@ -15,14 +15,15 @@ These walkthroughs connect the two: concept -> our code -> run it yourself -> ex
    embed, store). *Built in Phase 1.*
 2. [retrieval.md](retrieval.md) - hybrid search: dense + sparse + reciprocal-rank fusion.
    *Built in Phase 2.*
-3. [agents.md](agents.md) - the LangGraph agent: planner, retriever, drafter, critic, and the
-   self-reflection loop. *Built in Phase 3.*
+3. [agents.md](agents.md) - the LangGraph agent: planner, retriever, drafter, and the state
+   graph. *Built in Phase 3.*
+4. [guardrails.md](guardrails.md) - deterministic input/output checks (PII, injection, grounding)
+   as graph nodes, with a conditional edge. *Built in Phase 4.*
 
 ## Planned (filled in alongside the phase that builds the concept)
 
 - `mcp.md` - what MCP is and why a protocol boundary beats in-process tools *(Phase 6)*
 - `eval.md` - evaluating foundation models; the cost / latency / accuracy frontier *(Phase 10)*
-- `guardrails.md` - deterministic safety controls and where they sit *(Phase 4)*
 - `observability.md` - tracing reasoning chains with OpenTelemetry *(Phase 9)*
 - `cost.md` - prompt + semantic caching and token-cost optimization *(Phase 9)*
 - `cloud.md` - AWS deployment; Azure / GCP comparison *(Phase 11)*
