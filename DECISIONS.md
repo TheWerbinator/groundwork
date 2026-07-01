@@ -141,3 +141,29 @@ alternatives rejected. Written so each is defensible in an interview.
 - **Trusted corpus, so indirect (retrieved-document) injection is a documented extension.** The KB
   is content we authored, so retrieval-time injection screening is noted as future work rather
   than shipped, to avoid implying a defense that is not exercised.
+
+## Phase 5 decisions
+
+- **Critic is an LLM-as-a-judge, deliberately after the deterministic guards.** Phase 4 built the
+  cheap deterministic floor; the critic adds the semantic layer that regex cannot see (does the
+  answer actually address the question, given the context). Ordering teaches the distinction.
+- **Loop back to the planner, not the retriever.** Re-planning the search query from the critic's
+  reason is more agentic than re-running the same query, and it is what lets the second attempt go
+  after what the first missed. The planner reads `critic_feedback` when present.
+- **Bounded by a retry count in the state, using `>` not `>=`.** `retries` counts critic
+  rejections; the router re-plans while `retries <= max_retries`, so `max_retries=1` yields exactly
+  one re-plan (with `>=` it would yield zero, an off-by-one caught while writing the loop-bound
+  test). The bound lives in state so the cycle provably terminates.
+- **The critic fails open.** Unparseable critic output is treated as sufficient, so a malformed
+  judgment cannot trap the agent in an infinite loop. Availability beats an over-eager retry.
+- **`max_retries` default 1.** One reflection pass is a sensible cost/quality default for a
+  teaching demo; each retry is extra LLM calls. Configurable via settings.
+- **Lenient toward honest declines.** The critic accepts "the context does not cover this" as
+  sufficient. Rejecting honest declines is a policy choice set in the critic prompt, not baked into
+  the mechanism; left lenient by default and documented.
+- **True multi-agent consciously deferred, not overlooked.** We evaluated adding a dedicated
+  multi-agent phase (supervisor + specialized sub-agents, question decomposition via `Send`, or
+  debate/ensemble). For doc-QA over this corpus, a single agent with a critic loop is sufficient,
+  and adding agents without a query type that needs them would be over-engineering. The defensible
+  add, when warranted, is a supervisor routing by query type (e.g. a comparison sub-agent that
+  retrieves per entity for "compare X vs Y" questions). Kept on the backlog as an explicit option.

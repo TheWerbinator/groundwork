@@ -19,15 +19,23 @@ step runs next. A single **state** object is threaded through every node: each n
 returns updates. That is the whole model. The payoff over a hidden `while` loop is that the
 control flow is data you can inspect, stream, and test one node at a time.
 
-Our v1 graph is a straight line:
+The core of our graph is a straight line, planner -> retriever -> drafter. Two later phases grew
+it: guardrails on both ends (Phase 4) and a self-reflection loop (Phase 5). The full graph:
 
 ```
-START -> planner -> retriever -> drafter -> END
+START -> input_guard --(blocked)--> END
+              |
+            (ok)
+              v
+      planner -> retriever -> drafter -> critic --(ok / gave up)--> output_guard -> END
+         ^                                  |
+         |                            (insufficient)
+         +----------------------------------+
 ```
 
-[`agent/graph.py`](../apps/api/src/groundwork_api/agent/graph.py)'s `build_agent` is literally
-those four edges. Phase 5 will bend the line into a loop by adding a critic node and a
-*conditional* edge back to the retriever.
+[`agent/graph.py`](../apps/api/src/groundwork_api/agent/graph.py)'s `build_agent` is those edges.
+Start by reading the three core nodes below; the guards are covered in
+[guardrails.md](guardrails.md), and the critic loop has its own section near the end of this page.
 
 ## The state
 
@@ -142,8 +150,44 @@ The reasoning (linear v1 graph, factory-built nodes, provider-agnostic LLM seam,
 citations, the `notes` reducer as a teaching device) is under "Phase 3 decisions" in
 [DECISIONS.md](../DECISIONS.md).
 
+## Self-reflection: the critic loop (Phase 5)
+
+This is where the pipeline becomes a real agent. After the drafter, a **critic** node
+([`nodes.py`](../apps/api/src/groundwork_api/agent/nodes.py) `make_critic`) reads the question,
+the retrieved context, and the draft, and returns a verdict: `SUFFICIENT` or `INSUFFICIENT` with
+a reason. It is an LLM-as-a-judge, a second model role evaluating the drafter's work.
+
+A **conditional edge** then routes on that verdict:
+
+- **sufficient** (or retry budget spent) -> `output_guard` -> END.
+- **insufficient** -> back to `planner`, which re-plans the search query *using the critic's
+  reason*, so the next retrieval goes after what the last attempt missed.
+
+Two things keep the loop honest:
+
+- **It is bounded.** `retries` counts critic rejections and lives in the state; the router stops
+  looping once it exceeds `max_retries` (default 1). The loop cannot run forever, and the bound
+  is unit-tested (`test_critic_loops_then_stops_at_max_retries`).
+- **It fails open.** If the critic's reply cannot be parsed, `_parse_verdict` treats it as
+  sufficient, so a malformed critique cannot trap the agent.
+
+This reuses the exact conditional-edge mechanism the guardrails introduced, now pointed backward
+to form a cycle. That cycle, an agent judging and revising its own work, is the difference between
+a fixed pipeline and an agent.
+
+Note on behavior: the critic is lenient toward an honest "the context does not cover this,"
+treating it as grounded. Whether to reject honest declines is a policy choice you set in the
+critic prompt, not a limitation of the loop.
+
+## Design choices
+
+The reasoning (linear v1 graph, factory-built nodes, provider-agnostic LLM seam, deterministic
+citations, the `notes` reducer, the bounded critic loop) is under "Phase 3 decisions" and
+"Phase 5 decisions" in [DECISIONS.md](../DECISIONS.md).
+
 ## Where it goes next
 
-- [Phase 4] **Guardrails** wrap this agent: input checks (PII, injection) and output checks
-  (grounding enforcement) around the graph.
-- [Phase 5] **Self-reflection**: a critic node + a conditional edge make the straight line a loop.
+- [Phase 6] **MCP**: the retriever's knowledge-base search moves behind a Model Context Protocol
+  server, so the agent calls its tools over a protocol boundary.
+- [Phase 8] **Human-in-the-loop**: a reviewer approves/edits steps; the critic verdict and
+  guardrail flags are the signals they act on.

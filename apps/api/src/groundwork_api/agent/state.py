@@ -48,3 +48,8 @@ class AgentState(TypedDict):
     blocked: bool  # input guard refused the request (e.g. prompt injection)
     grounded: bool  # output guard confirmed the answer cites retrieved sources
     flags: Annotated[list[str], add]  # guardrail findings, accumulated across guard nodes
+
+    # Self-reflection (Phase 5)
+    retries: int  # how many times the critic has sent the answer back (failure count)
+    critic_sufficient: bool  # critic's verdict on the current answer
+    critic_feedback: str  # critic's reason, fed to the planner on a retry

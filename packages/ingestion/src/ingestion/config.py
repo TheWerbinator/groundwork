@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     top_k: int = 5  # chunks returned after fusion + rerank
     rrf_k: int = 60  # Reciprocal Rank Fusion constant (Cormack et al. 2009)
 
+    # Agent self-reflection (Phase 5)
+    max_retries: int = 1  # how many times the critic may send a weak answer back to re-plan
+
     # LLM (the agent's answering model)
     default_provider: str = "claude"  # "claude" | "openai" | "ollama"
     anthropic_api_key: str = ""

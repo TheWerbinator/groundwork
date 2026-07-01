@@ -33,5 +33,7 @@ def build_service(settings: Settings | None = None) -> AgentService:
     settings = settings or get_settings()
     llm = build_chat_model(settings)
     retriever = HybridRetriever(settings)
-    graph = build_agent(llm, retriever, top_k=settings.top_k)
+    graph = build_agent(
+        llm, retriever, top_k=settings.top_k, max_retries=settings.max_retries
+    )
     return AgentService(graph)

@@ -42,6 +42,7 @@ class AskResponse(BaseModel):
     blocked: bool  # input guard refused the request
     grounded: bool  # output guard confirmed the answer cites retrieved sources
     flags: list[str]  # guardrail findings (pii_redacted, injection, ungrounded, ...)
+    retries: int  # times the critic sent the answer back to re-plan (self-reflection)
 
 
 # --- Dependency: one AgentService for the process, overridable in tests ---
@@ -72,4 +73,5 @@ def ask(req: AskRequest, service: AgentService = Depends(get_service)) -> AskRes
         blocked=state.get("blocked", False),
         grounded=state.get("grounded", False),
         flags=state.get("flags", []),
+        retries=state.get("retries", 0),
     )

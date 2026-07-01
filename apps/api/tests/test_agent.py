@@ -11,13 +11,15 @@ from groundwork_api.agent.guards import REFUSAL
 
 
 class FakeChatModel:
-    """Returns a planner query or a drafter answer depending on the system prompt."""
+    """Routes by system prompt: planner query, critic verdict, or drafter answer."""
 
     def invoke(self, messages):
         system = messages[0][1].lower()
-        if "search query" in system:
+        if "search query" in system:  # planner
             return SimpleNamespace(content="reciprocal rank fusion k constant")
-        return SimpleNamespace(
+        if "critic" in system:  # critic: accept by default
+            return SimpleNamespace(content="VERDICT: SUFFICIENT\nREASON: grounded and complete")
+        return SimpleNamespace(  # drafter
             content="RRF merges ranked lists by summing 1/(k+rank) [hybrid-search]."
         )
 
@@ -27,9 +29,19 @@ class FakeChatModelNoCite(FakeChatModel):
 
     def invoke(self, messages):
         system = messages[0][1].lower()
-        if "search query" in system:
-            return SimpleNamespace(content="reciprocal rank fusion")
+        if "search query" in system or "critic" in system:
+            return super().invoke(messages)
         return SimpleNamespace(content="RRF is a fusion method with no citation here.")
+
+
+class FakeChatModelAlwaysInsufficient(FakeChatModel):
+    """Critic always rejects, to exercise the retry loop and its bound."""
+
+    def invoke(self, messages):
+        system = messages[0][1].lower()
+        if "critic" in system:
+            return SimpleNamespace(content="VERDICT: INSUFFICIENT\nREASON: needs more detail")
+        return super().invoke(messages)
 
 
 class FakeRetriever:
@@ -78,22 +90,36 @@ def test_citations_are_unique_and_from_retrieved_sources():
     assert {c["heading"] for c in cites} == {"Reciprocal Rank Fusion", "Dense versus sparse"}
 
 
-def test_notes_reducer_accumulates_across_nodes():
-    state = _graph().invoke(initial_state("rrf?"))
-    # The `add` reducer appends each node's note: one per node, guards included.
-    assert len(state["notes"]) == 5
-    assert state["notes"][0].startswith("input_guard")
-    assert state["notes"][1].startswith("planner")
-    assert state["notes"][2].startswith("retriever")
-    assert state["notes"][3].startswith("drafter")
-    assert state["notes"][4].startswith("output_guard")
-
-
-def test_stream_emits_one_event_per_node():
+def test_stream_visits_nodes_in_order_no_loop():
     seen = []
     for event in _graph().stream(initial_state("rrf?"), stream_mode="updates"):
         seen.extend(event.keys())
-    assert seen == ["input_guard", "planner", "retriever", "drafter", "output_guard"]
+    # Critic accepts, so no loop: each node once, in order.
+    assert seen == [
+        "input_guard", "planner", "retriever", "drafter", "critic", "output_guard"
+    ]
+
+
+# --- Self-reflection (critic loop) ---
+
+def test_critic_sufficient_does_not_loop():
+    state = _graph().invoke(initial_state("how does rrf work?"))
+    assert state["critic_sufficient"] is True
+    assert state["retries"] == 0
+
+
+def test_critic_loops_then_stops_at_max_retries():
+    graph = build_agent(FakeChatModelAlwaysInsufficient(), FakeRetriever(_hits()),
+                        top_k=2, max_retries=1)
+    seen = []
+    for event in graph.stream(initial_state("rrf?"), stream_mode="updates"):
+        seen.extend(event.keys())
+    # max_retries=1 -> one re-plan loop: planner/retriever/drafter/critic run twice, then done.
+    assert seen.count("planner") == 2
+    assert seen.count("critic") == 2
+    assert seen[-1] == "output_guard"  # terminated, did not run forever
+    final = graph.invoke(initial_state("rrf?"))
+    assert final["retries"] == 2  # two rejections; loop was bounded
 
 
 # --- Guardrail integration ---

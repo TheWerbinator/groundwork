@@ -18,6 +18,7 @@ class FakeService:
             "blocked": False,
             "grounded": True,
             "flags": [],
+            "retries": 0,
         }
 
 
@@ -44,6 +45,7 @@ def test_ask_returns_grounded_answer_shape():
     assert body["blocked"] is False
     assert body["grounded"] is True
     assert body["flags"] == []
+    assert body["retries"] == 0
 
 
 def test_ask_rejects_empty_question():

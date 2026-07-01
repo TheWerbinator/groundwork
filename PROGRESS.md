@@ -2,6 +2,24 @@
 
 Running log of what is built, phase by phase. Newest entries at the top of each phase.
 
+## Phase 5 - Self-reflection / critic loop (done)
+
+- **Critic node** (`agent/nodes.py` `make_critic`): an LLM-as-a-judge reads question + context +
+  draft and returns `VERDICT: SUFFICIENT|INSUFFICIENT` + reason (`_parse_verdict`, fails OPEN on
+  unparseable output so it cannot trap the loop).
+- **Conditional loop edge** (`graph.py`): `drafter -> critic`, then a conditional edge routes an
+  insufficient answer back to `planner`; a sufficient answer (or an exhausted budget) goes to
+  `output_guard`. The planner re-plans using the critic's feedback on a retry.
+- **Bounded**: `retries` (critic-rejection count) lives in state; `route_after_critic` stops once
+  it exceeds `max_retries` (default 1, a setting). Cannot loop forever.
+- **State/REST**: added `retries`, `critic_sufficient`, `critic_feedback`; `/ask` returns
+  `retries`.
+- **Tests:** 26 total; added critic happy-path (no loop, retries 0) + loop-bound (planner/critic
+  run exactly twice at max_retries=1, then terminate).
+- **Verified live (Claude):** critic runs and judges SUFFICIENT on a covered question (no loop,
+  grounded); it also accepted an honest "not covered" as sufficient (a lenient-decline policy
+  choice, not a bug). Loop + bound proven deterministically in tests.
+
 ## Phase 4 - Guardrails (done)
 
 - **`groundwork_api/guardrails/`** (pure, deterministic, no LLM):
@@ -137,7 +155,7 @@ node. Linked from the root README and each package README.
 | 2 | Hybrid retrieval | done |
 | 3 | Agent v1 (LangGraph) | done |
 | 4 | Guardrails | done |
-| 5 | Self-reflection + critic | not started |
+| 5 | Self-reflection + critic | done |
 | 6 | MCP | not started |
 | 7 | Rust rerank service | not started |
 | 8 | HITL UI | not started |
