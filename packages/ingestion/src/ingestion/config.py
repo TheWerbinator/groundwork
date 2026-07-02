@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     # Agent self-reflection (Phase 5)
     max_retries: int = 1  # how many times the critic may send a weak answer back to re-plan
 
+    # Retrieval backend (Phase 6)
+    retrieval_backend: str = "direct"  # "direct" (in-process) | "mcp" (over the MCP protocol)
+    mcp_url: str = "http://localhost:9000/mcp"  # Groundwork MCP server (streamable-http)
+
     # LLM (the agent's answering model)
     default_provider: str = "claude"  # "claude" | "openai" | "ollama"
     anthropic_api_key: str = ""

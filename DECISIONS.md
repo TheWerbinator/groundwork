@@ -142,6 +142,26 @@ alternatives rejected. Written so each is defensible in an interview.
   is content we authored, so retrieval-time injection screening is noted as future work rather
   than shipped, to avoid implying a defense that is not exercised.
 
+## Phase 6 decisions
+
+- **MCP-backed retrieval implements the same `.retrieve()` interface.** `McpRetriever` is a drop-in
+  for `HybridRetriever`, so the retriever node, the graph, the guards, and the critic loop are all
+  unchanged; only the retrieval *transport* moves behind the protocol. This is the cleanest way to
+  teach the boundary without rewriting the agent.
+- **`RETRIEVAL_BACKEND` defaults to `direct`.** The agent runs with zero extra processes out of the
+  box; MCP is opt-in. Keeps local-first working and the test suite server-free, while making the
+  protocol path a one-flag switch.
+- **Streamable-http as the default transport.** It is a genuine network boundary that matches the
+  docker-compose service and avoids cross-venv subprocess spawning (the friction with stdio when
+  the server and client are separate uv packages). stdio stays available via `MCP_TRANSPORT`.
+- **Verified the SDK API empirically, not from memory.** Online MCP docs were ambiguous (a v2
+  pre-release vs the stable FastMCP line), so the stable API and the adapter's transport literals
+  were confirmed by installing and introspecting. Two behaviors (async client in a sync node; the
+  content-block-wrapped tool result) were only found by running it, and are now pinned by a test.
+- **Async-to-sync bridge with `asyncio.run` inside `.retrieve`.** The graph nodes are sync and the
+  MCP client is async; bridging at the retriever keeps async out of the rest of the agent. Safe
+  because `.retrieve` is only called from sync contexts (CLI, FastAPI worker thread).
+
 ## Phase 5 decisions
 
 - **Critic is an LLM-as-a-judge, deliberately after the deterministic guards.** Phase 4 built the

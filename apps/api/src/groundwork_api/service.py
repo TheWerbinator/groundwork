@@ -29,10 +29,19 @@ class AgentService:
         yield from self._graph.stream(initial_state(question), stream_mode="updates")
 
 
+def _build_retriever(settings: Settings):
+    """Direct in-process retrieval, or retrieval over the MCP protocol, per config."""
+    if settings.retrieval_backend == "mcp":
+        from groundwork_api.mcp_client import McpRetriever
+
+        return McpRetriever(settings)
+    return HybridRetriever(settings)
+
+
 def build_service(settings: Settings | None = None) -> AgentService:
     settings = settings or get_settings()
     llm = build_chat_model(settings)
-    retriever = HybridRetriever(settings)
+    retriever = _build_retriever(settings)
     graph = build_agent(
         llm, retriever, top_k=settings.top_k, max_retries=settings.max_retries
     )

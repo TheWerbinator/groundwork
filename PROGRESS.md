@@ -2,6 +2,24 @@
 
 Running log of what is built, phase by phase. Newest entries at the top of each phase.
 
+## Phase 6 - MCP (done)
+
+- **`apps/mcp`** (FastMCP server, mcp 1.28.1): `search_kb(query, top_k)` tool runs hybrid
+  retrieval and returns JSON `{id,text,source,heading,score}`. Streamable-http default at
+  `127.0.0.1:9000/mcp`; `MCP_TRANSPORT=stdio` optional.
+- **`apps/api` client**: `mcp_client.McpRetriever` implements the same `.retrieve()` interface via
+  `langchain-mcp-adapters` (`MultiServerMCPClient`, transport `streamable_http`), so the retriever
+  node and graph are unchanged. `service._build_retriever` switches on `RETRIEVAL_BACKEND`
+  (`direct` default | `mcp`).
+- **API verified empirically before building** (mcp SDK ambiguous online): installed + introspected
+  FastMCP and the adapter transport literals rather than guessing.
+- **Two runtime details found by running it, then fixed:** the adapter is async while the node is
+  sync (bridged with `asyncio.run`); the tool result is a list of content blocks
+  (`[{type:text,text:<json>}]`), so `_content_text` unwraps before `json.loads`.
+- **Tests:** 29 total (+3 MCP client parse/mapping, no server). **Verified live:** started the
+  server, ran the agent with `RETRIEVAL_BACKEND=mcp`, retriever pulled 5 chunks OVER THE PROTOCOL,
+  answer grounded, critic SUFFICIENT.
+
 ## Phase 5 - Self-reflection / critic loop (done)
 
 - **Critic node** (`agent/nodes.py` `make_critic`): an LLM-as-a-judge reads question + context +
@@ -156,7 +174,7 @@ node. Linked from the root README and each package README.
 | 3 | Agent v1 (LangGraph) | done |
 | 4 | Guardrails | done |
 | 5 | Self-reflection + critic | done |
-| 6 | MCP | not started |
+| 6 | MCP | done |
 | 7 | Rust rerank service | not started |
 | 8 | HITL UI | not started |
 | 9 | Observability | not started |

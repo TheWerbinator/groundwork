@@ -23,7 +23,8 @@ START -> input_guard --(blocked)--> END
 - **planner** ([agent/nodes.py](src/groundwork_api/agent/nodes.py)) - LLM rewrites the question
   into a focused search query (using the critic's feedback on a retry).
 - **retriever** - runs hybrid search ([packages/retrieval](../../packages/retrieval)) for that
-  query.
+  query, in-process by default or over MCP when `RETRIEVAL_BACKEND=mcp` (see
+  [docs/mcp.md](../../docs/mcp.md)).
 - **drafter** - LLM writes a grounded answer from the retrieved chunks and cites the sources.
 - **critic** - LLM-as-a-judge; a weak answer loops back to the planner, bounded by `max_retries`.
 - **output_guard** - enforce grounding (answer must cite a retrieved source) and scan for leaked

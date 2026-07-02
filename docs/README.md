@@ -18,11 +18,13 @@ These walkthroughs connect the two: concept -> our code -> run it yourself -> ex
 3. [agents.md](agents.md) - the LangGraph agent: planner, retriever, drafter, and the state
    graph. *Built in Phase 3.*
 4. [guardrails.md](guardrails.md) - deterministic input/output checks (PII, injection, grounding)
-   as graph nodes, with a conditional edge. *Built in Phase 4.*
+   as graph nodes, with a conditional edge. *Built in Phase 4.* (The critic loop is covered at the
+   end of [agents.md](agents.md). *Phase 5.*)
+5. [mcp.md](mcp.md) - putting the knowledge-base search behind a Model Context Protocol server and
+   calling it from the agent as a client. *Built in Phase 6.*
 
 ## Planned (filled in alongside the phase that builds the concept)
 
-- `mcp.md` - what MCP is and why a protocol boundary beats in-process tools *(Phase 6)*
 - `eval.md` - evaluating foundation models; the cost / latency / accuracy frontier *(Phase 10)*
 - `observability.md` - tracing reasoning chains with OpenTelemetry *(Phase 9)*
 - `cost.md` - prompt + semantic caching and token-cost optimization *(Phase 9)*
